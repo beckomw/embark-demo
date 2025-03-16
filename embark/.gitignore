@@ -1,5 +1,13 @@
-# Ignore the node_modules folder(containes libraries and dependencies)
+# Ignore dependencies 
 node_modules/ 
 
+
+
+#Ignore logs
+*.log 
+
+
+# Ignore environment files
+.env 
 
 
