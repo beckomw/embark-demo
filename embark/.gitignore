@@ -1,0 +1,5 @@
+# Ignore the node_modules folder(containes libraries and dependencies)
+node_modules/ 
+
+
+
