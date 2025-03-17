@@ -1,6 +1,6 @@
 # Ignore dependencies 
 node_modules/ 
-
+dist/   
 
 
 #Ignore logs

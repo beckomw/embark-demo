@@ -1,16 +1,15 @@
 {
-  "name": "embark",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "main.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "raylib": "^0.14.0"
-  }
+    "name": "game-project",
+    "version": "1.0.0",
+    "description": "A robust 3D game built with Raylib and JavaScript.",
+    "main": "src/main.js",
+    "type": "module", 
+    "scripts": {
+        "start": "node src/main.js"
+    },
+    "dependencies": {
+        "raylib": "^4.0.0",
+        "gl-matrix": "^3.4.3"
+    }
 }
+
