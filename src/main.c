@@ -15,8 +15,65 @@
 
 #include "raylib.h"
 #include "rcamera.h"
+#include "rlgl.h"
 
 #define MAX_COLUMNS 20
+
+// Custom function to draw a textured cube
+void DrawTexturedCube(Texture2D texture, Vector3 position, float width, float height, float length, Color tint)
+{
+    float x = position.x;
+    float y = position.y;
+    float z = position.z;
+    
+    rlPushMatrix();
+    rlTranslatef(x, y, z);
+    rlScalef(width, height, length);
+    
+    rlSetTexture(texture.id);
+    rlBegin(RL_QUADS);
+    rlColor4ub(tint.r, tint.g, tint.b, tint.a);
+    
+    // Front face
+    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, 0.5f);
+    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(0.5f, -0.5f, 0.5f);
+    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(0.5f, 0.5f, 0.5f);
+    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, 0.5f);
+    
+    // Back face
+    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, -0.5f);
+    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, -0.5f);
+    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(0.5f, 0.5f, -0.5f);
+    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(0.5f, -0.5f, -0.5f);
+    
+    // Top face
+    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, -0.5f);
+    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-0.5f, 0.5f, 0.5f);
+    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(0.5f, 0.5f, 0.5f);
+    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(0.5f, 0.5f, -0.5f);
+    
+    // Bottom face
+    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(-0.5f, -0.5f, -0.5f);
+    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(0.5f, -0.5f, -0.5f);
+    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(0.5f, -0.5f, 0.5f);
+    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, 0.5f);
+    
+    // Right face
+    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(0.5f, -0.5f, -0.5f);
+    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(0.5f, 0.5f, -0.5f);
+    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(0.5f, 0.5f, 0.5f);
+    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(0.5f, -0.5f, 0.5f);
+    
+    // Left face
+    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, -0.5f);
+    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, 0.5f);
+    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, 0.5f);
+    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, -0.5f);
+    
+    rlEnd();
+    rlSetTexture(0);
+    rlPopMatrix();
+}
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -39,6 +96,11 @@ int main(void)
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
 
     int cameraMode = CAMERA_FIRST_PERSON;
+
+    // Create a procedural brick texture
+    Image brickImage = GenImageChecked(64, 64, 8, 8, (Color){139, 69, 19, 255}, (Color){160, 82, 45, 255}); // Brown brick pattern
+    Texture2D brickTexture = LoadTextureFromImage(brickImage);
+    UnloadImage(brickImage); // Unload image from RAM after loading texture
 
     // Generates some random columns
     float heights[MAX_COLUMNS] = { 0 };
@@ -178,11 +240,11 @@ int main(void)
                 DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);      // Draw a green wall
                 DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);      // Draw a yellow wall
 
-                // Draw some cubes around
+                // Draw some textured building columns
                 for (int i = 0; i < MAX_COLUMNS; i++)
                 {
-                    DrawCube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawTexturedCube(brickTexture, positions[i], 2.0f, heights[i], 2.0f, WHITE);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, DARKBROWN);
                 }
 
                 // Draw player cube
@@ -225,6 +287,7 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
+    UnloadTexture(brickTexture);  // Unload texture from VRAM
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
