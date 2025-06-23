@@ -1,89 +1,18 @@
-/*******************************************************************************************
-*
-*   raylib [core] example - 3d camera first person
-*
-*   Example complexity rating: [★★☆☆] 2/4
-*
-*   Example originally created with raylib 1.3, last time updated with raylib 1.3
-*
-*   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
-*   BSD-like license that allows static linking with closed source software
-*
-*   Copyright (c) 2015-2025 Ramon Santamaria (@raysan5)
-*
-********************************************************************************************/
 
 #include "raylib.h"
 #include "rcamera.h"
-#include "rlgl.h"
 
 #define MAX_COLUMNS 20
 
-// Custom function to draw a textured cube
-void DrawTexturedCube(Texture2D texture, Vector3 position, float width, float height, float length, Color tint)
-{
-    float x = position.x;
-    float y = position.y;
-    float z = position.z;
-    
-    rlPushMatrix();
-    rlTranslatef(x, y, z);
-    rlScalef(width, height, length);
-    
-    rlSetTexture(texture.id);
-    rlBegin(RL_QUADS);
-    rlColor4ub(tint.r, tint.g, tint.b, tint.a);
-    
-    // Front face
-    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, 0.5f);
-    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(0.5f, -0.5f, 0.5f);
-    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(0.5f, 0.5f, 0.5f);
-    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, 0.5f);
-    
-    // Back face
-    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, -0.5f);
-    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, -0.5f);
-    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(0.5f, 0.5f, -0.5f);
-    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(0.5f, -0.5f, -0.5f);
-    
-    // Top face
-    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, -0.5f);
-    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-0.5f, 0.5f, 0.5f);
-    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(0.5f, 0.5f, 0.5f);
-    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(0.5f, 0.5f, -0.5f);
-    
-    // Bottom face
-    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(-0.5f, -0.5f, -0.5f);
-    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(0.5f, -0.5f, -0.5f);
-    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(0.5f, -0.5f, 0.5f);
-    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, 0.5f);
-    
-    // Right face
-    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(0.5f, -0.5f, -0.5f);
-    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(0.5f, 0.5f, -0.5f);
-    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(0.5f, 0.5f, 0.5f);
-    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(0.5f, -0.5f, 0.5f);
-    
-    // Left face
-    rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, -0.5f);
-    rlTexCoord2f(1.0f, 0.0f); rlVertex3f(-0.5f, -0.5f, 0.5f);
-    rlTexCoord2f(1.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, 0.5f);
-    rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-0.5f, 0.5f, -0.5f);
-    
-    rlEnd();
-    rlSetTexture(0);
-    rlPopMatrix();
-}
-
-//------------------------------------------------------------------------------------
-// Program main entry point
+//------------------------------------------------------------------------------------ HOW TO COMPILE and runWHILE DEBUGING IN THE DIRECTORY > gcc main.c -o main -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
+// Program main entry point                                                                
 //------------------------------------------------------------------------------------
 int main(void)
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    const int screenWidth = 1200;
-    const int screenHeight = 800;
+    const int screenWidth = 1920;
+    const int screenHeight = 1080;
 
     InitWindow(screenWidth, screenHeight, "embark-openjourney");
 
@@ -97,11 +26,6 @@ int main(void)
 
     int cameraMode = CAMERA_FIRST_PERSON;
 
-    // Create a procedural brick texture
-    Image brickImage = GenImageChecked(64, 64, 8, 8, (Color){139, 69, 19, 255}, (Color){160, 82, 45, 255}); // Brown brick pattern
-    Texture2D brickTexture = LoadTextureFromImage(brickImage);
-    UnloadImage(brickImage); // Unload image from RAM after loading texture
-
     // Generates some random columns
     float heights[MAX_COLUMNS] = { 0 };
     Vector3 positions[MAX_COLUMNS] = { 0 };
@@ -109,8 +33,8 @@ int main(void)
 
     for (int i = 0; i < MAX_COLUMNS; i++)
     {
-        heights[i] = (float)GetRandomValue(1, 12);
-        positions[i] = (Vector3){ (float)GetRandomValue(-15, 15), heights[i]/2.0f, (float)GetRandomValue(-15, 15) };
+        heights[i] = (float)GetRandomValue(31, 92);
+        positions[i] = (Vector3){ (float)GetRandomValue(-55, 55), heights[i]/2.0f, (float)GetRandomValue(-55, 55) };
         colors[i] = (Color){ GetRandomValue(20, 255), GetRandomValue(10, 55), 30, 255 };
     }
 
@@ -240,14 +164,38 @@ int main(void)
                 DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);      // Draw a green wall
                 DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);      // Draw a yellow wall
 
-                // Draw some textured building columns
+                // Draw some cubes around
                 for (int i = 0; i < MAX_COLUMNS; i++)
                 {
-                    DrawTexturedCube(brickTexture, positions[i], 2.0f, heights[i], 2.0f, WHITE);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, DARKBROWN);
+                    DrawCube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
                 }
 
-                // Draw player cube
+                // Draw player cube   I think this is where I have to enter my character
+		//
+		//
+		//
+		//
+		//
+		//
+		//
                 if (cameraMode == CAMERA_THIRD_PERSON)
                 {
                     DrawCube(camera.target, 0.5f, 0.5f, 0.5f, PURPLE);
@@ -287,7 +235,6 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    UnloadTexture(brickTexture);  // Unload texture from VRAM
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
