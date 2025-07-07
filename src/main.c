@@ -2,7 +2,64 @@
 #include "raylib.h"
 #include "rcamera.h"
 
-#define MAX_COLUMNS 20
+#define MAX_COLUMNS 2000
+#define MAX_PARTICLES 1000
+
+// Particle structure
+typedef struct FallingCube {
+    Vector3 position;
+    Vector3 velocity;
+    Color color;
+    float size;
+    bool active;
+} FallingCube;
+
+static FallingCube fallingCubes[MAX_PARTICLES];
+
+// Initialize particles
+static void InitFallingCubes(void) {
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+        fallingCubes[i].active = false;
+    }
+}
+
+// Update particles
+static void UpdateFallingCubes(void) {
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+        if (fallingCubes[i].active) {
+            fallingCubes[i].position.x += fallingCubes[i].velocity.x;
+            fallingCubes[i].position.y += fallingCubes[i].velocity.y;
+            fallingCubes[i].position.z += fallingCubes[i].velocity.z;
+
+            // Recycle cubes that fall below a certain point
+            if (fallingCubes[i].position.y < -10.0f) { // A bit below the ground
+                fallingCubes[i].active = false;
+            }
+        }
+    }
+
+    // Emit new cubes
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+        if (!fallingCubes[i].active) {
+            fallingCubes[i].position = (Vector3){ (float)GetRandomValue(-50, 50), (float)GetRandomValue(50, 100), (float)GetRandomValue(-50, 50) };
+            fallingCubes[i].velocity = (Vector3){ 0.0f, -0.5f, 0.0f }; // Falling downwards
+            fallingCubes[i].color = (Color){ (unsigned char)GetRandomValue(0, 255), (unsigned char)GetRandomValue(0, 255), (unsigned char)GetRandomValue(0, 255), 255 }; // Random color
+            fallingCubes[i].size = (float)GetRandomValue(1, 5) * 0.1f; // Small random size
+            fallingCubes[i].active = true;
+            break; // Only emit one cube per frame to control density
+        }
+    }
+}
+
+// Draw particles
+static void DrawFallingCubes(void) {
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+        if (fallingCubes[i].active) {
+            DrawCube(fallingCubes[i].position, fallingCubes[i].size, fallingCubes[i].size, fallingCubes[i].size, fallingCubes[i].color);
+            DrawCubeWires(fallingCubes[i].position, fallingCubes[i].size, fallingCubes[i].size, fallingCubes[i].size, DARKGRAY);
+        }
+    }
+}
 
 //------------------------------------------------------------------------------------ HOW TO COMPILE and runWHILE DEBUGING IN THE DIRECTORY > gcc main.c -o main -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 // Program main entry point                                                                
@@ -15,6 +72,19 @@ int main(void)
     const int screenHeight = 1080;
 
     InitWindow(screenWidth, screenHeight, "embark-openjourney");
+
+    // Load texture for the floor
+    Image textureImage = LoadImage("texture.png"); // Load image data into CPU memory (RAM)
+    // Define the rectangle for cropping (x, y, width, height)
+    Rectangle cropRect = { 0, 0, 256, 256 };
+    ImageCrop(&textureImage, cropRect); // Crop the image
+    Texture2D floorTexture = LoadTextureFromImage(textureImage); // Load texture from image data
+    UnloadImage(textureImage); // Unload image data from CPU memory (RAM)
+
+    // Create a plane mesh and model for the floor
+    Mesh floorMesh = GenMeshPlane(1000.0f, 1000.0f, 10, 10);
+    Model floorModel = LoadModelFromMesh(floorMesh);
+    floorModel.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
@@ -33,9 +103,21 @@ int main(void)
 
     for (int i = 0; i < MAX_COLUMNS; i++)
     {
-        heights[i] = (float)GetRandomValue(31, 92);
-        positions[i] = (Vector3){ (float)GetRandomValue(-55, 55), heights[i]/2.0f, (float)GetRandomValue(-55, 55) };
-        colors[i] = (Color){ GetRandomValue(20, 255), GetRandomValue(10, 55), 30, 255 };
+        heights[i] = (float)GetRandomValue(40, 150);
+        
+        // Arrange buildings in a grid with some randomness
+        int gridX = i % 40;
+        int gridZ = i / 40;
+        float posX = (gridX - 20) * 20.0f + (float)GetRandomValue(-2, 2);
+        float posZ = (gridZ - 20) * 20.0f + (float)GetRandomValue(-2, 2);
+        positions[i] = (Vector3){ posX, heights[i]/2.0f, posZ };
+
+        if (GetRandomValue(0, 10) > 2) {
+            unsigned char grayValue = GetRandomValue(40, 150);
+            colors[i] = (Color){ grayValue, grayValue, grayValue, 255 };
+        } else {
+            colors[i] = (Color){ (unsigned char)GetRandomValue(150, 255), 50, 50, 255 };
+        }
     }
 
 
@@ -44,6 +126,16 @@ int main(void)
     DisableCursor();                    // Limit cursor to relative movement inside the window
 
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
+    InitFallingCubes();                    // Initialize falling cubes
+
+    // Spawn 3 initial cubes near the player's starting position
+    for (int i = 0; i < 3; i++) {
+        fallingCubes[i].position = (Vector3){ camera.target.x + GetRandomValue(-5, 5), camera.target.y + 20 + GetRandomValue(0, 10), camera.target.z + GetRandomValue(-5, 5) };
+        fallingCubes[i].velocity = (Vector3){ 0.0f, -0.5f, 0.0f };
+        fallingCubes[i].color = (Color){ (unsigned char)GetRandomValue(0, 255), (unsigned char)GetRandomValue(0, 255), (unsigned char)GetRandomValue(0, 255), 255 };
+        fallingCubes[i].size = (float)GetRandomValue(1, 5) * 0.1f;
+        fallingCubes[i].active = true;
+    }
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -51,6 +143,7 @@ int main(void)
     {
         // Update
         //----------------------------------------------------------------------------------
+        UpdateFallingCubes();                  // Update falling cubes
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE))
         {
@@ -134,58 +227,18 @@ int main(void)
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
-            ClearBackground(RAYWHITE);
+            ClearBackground(BLUE);
 
             BeginMode3D(camera);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 184.0f, 184.0f }, LIGHTGRAY); // Draw ground
-                DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, BLUE);     // Draw a blue wall
-                DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);      // Draw a green wall
-                DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);      // Draw a yellow wall
+                DrawModel(floorModel, (Vector3){ 0.0f, 0.0f, 0.0f }, 1.0f, WHITE); // Draw textured ground
+                DrawGrid(1000, 1.0f); // Draw a grid on the ground
 
                 // Draw some cubes around
                 for (int i = 0; i < MAX_COLUMNS; i++)
                 {
-                    DrawCube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, GOLD);
+                    DrawCube(positions[i], 2.5f, heights[i], 2.5f, colors[i]);
+                    DrawCubeWires(positions[i], 2.5f, heights[i], 2.5f, DARKGRAY);
                 }
 
                 // Draw player cube   I think this is where I have to enter my character
@@ -201,6 +254,8 @@ int main(void)
                     DrawCube(camera.target, 0.5f, 0.5f, 0.5f, PURPLE);
                     DrawCubeWires(camera.target, 0.5f, 0.5f, 0.5f, DARKPURPLE);
                 }
+
+                DrawFallingCubes(); // Draw falling cubes
 
             EndMode3D();
 
@@ -235,6 +290,8 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
+    UnloadTexture(floorTexture); // Unload texture
+    UnloadModel(floorModel);     // Unload model
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
